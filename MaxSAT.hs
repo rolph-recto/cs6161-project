@@ -51,24 +51,35 @@ sat model (If p q) = (not $ sat model p) || (sat model q)
 sat model (Iff p q) = (sat model p) == (sat model q)
 
 -- take a set of variables and generate a CNF formula
-genCNF :: [String] -> Int -> Int -> IO Formula
-genCNF vars nliterals nclauses = do
+-- rlits specifies whether the number of literals is random
+-- (uniformly distributed between (1,nliterals) or is a constant (nliterals)
+-- p is the proportion of literals that are positive
+genCNF :: Bool -> Float -> [String] -> Int -> Int -> IO Formula
+genCNF rlits p vars nliterals nclauses = do
   clauses <- forM [1..nclauses] $ \_ -> do
     -- generate a single clause by randomly choosing variables
     -- and literal polarity (i.e., X or ~X)
-    cvars <- sampleRVar $ choices nliterals vars
-    clits <- sampleRVar $ choices nliterals [Sym, NotSym]
+    cnlit <- do
+      if rlits
+      then sampleRVar $ uniform 1 nliterals
+      else return nliterals
+    cvars <- sampleRVar $ choices cnlit vars
+    clits <- do
+      pvals <- forM [1..cnlit] $ \_ -> sampleRVar (stdUniform :: RVar Float)
+      return $ map (\pval -> if p >= pval then Sym else NotSym) pvals
     let clause = map (\(l, s) -> l s) $ zip clits cvars
     return $ Or clause
 
   return $ And clauses
 
 -- Randomized algorithm for MaxSAT
--- from Kleinberg-Tardos (chapter ??)
+-- from Kleinberg-Tardos (chapter 13.4)
 -- create a model by assigning T/F randomly to variables
-maxSAT_KT :: [String] -> IO Model
-maxSAT_KT vars = do
-  vals <- sampleRVar $ choices (length vars) [True, False]
+-- p is the proportion of variables to be assigned true
+maxSAT_KT :: Float -> [String] -> IO Model
+maxSAT_KT p vars = do
+  pvals <- forM vars $ \_ -> sampleRVar (stdUniform :: RVar Float)
+  let vals = map (\pval -> p >= pval) pvals
   return $ M.fromList $ zip vars vals
 
 -- take a MaxSAT algorithm output (model)
@@ -78,7 +89,9 @@ maxSAT_KT vars = do
 maxSAT :: ([String] -> IO Model) -> Formula -> IO (Int,Int)
 maxSAT algo (And clauses) = do
   -- collect vars in the formula
-  let vars = S.toList $ foldr (\(Or lits) acc -> foldr (\l acc2 -> S.insert (litVar l) acc2) acc lits) S.empty clauses
+  let vars = S.toList $ foldr (\(Or lits) acc ->
+                foldr (\l acc2 ->
+                  S.insert (litVar l) acc2) acc lits) S.empty clauses
   model <- algo vars
   let satClauses = filter (sat model) clauses
   return (length satClauses, length clauses)
@@ -89,8 +102,8 @@ vars :: Int -> [String]
 vars n = map (\i -> "x" ++ (show i)) [1..n]
 
 main = do
-  f <- genCNF (vars 5) 1 1000
-  (m,n) <- maxSAT (maxSAT_KT) f
+  f <- genCNF False 0.5 (vars 5) 3 1000
+  (m,n) <- maxSAT (maxSAT_KT 0.50) f
   print f
   print (m,n)
   
