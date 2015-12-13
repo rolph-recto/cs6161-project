@@ -1,4 +1,4 @@
-% An Analysis of MaxSAT Approximation Algorithms
+% An Analysis of the Kleinberg-Tardos MaxSAT Approximation Algorithm
 % Rolph Recto
 % CS 6161 Final Project
 
@@ -6,9 +6,11 @@
 \newcommand{\paren}[1]{\left ( #1 \right )}
 \newcommand{\bracket}[1]{\left [ #1 \right ]}
 
-## 1 - Randomized Algorithm from Kleinberg-Tardos
-
-We explore two research questions:
+The simple randomized algorithm presented in Chapter 13.4 of
+Kleinberg-Tardos[^1] is one of the simplest for approximating SAT, yet
+is also surprising effective, satisfying on average over 7/8 of clauses
+for 3-CNF instances. In this paper we extend the analysis of this algorithm
+(henceforth the "KT algorithm") and explore two research questions:
 
 * What is the distribution of satisfied clauses if the number of literals
 in a clause is random?
@@ -17,7 +19,28 @@ in a clause is random?
 of variables assigned as true/false and (2) proportion of positive literals 
 in each clause?
 
-### 1.1 - Random number of literals
+[^1]: Jon Kleinberg and Éva Tardos, *Algorithm Design* (Pearson, 2005).
+
+## 0 - Algorithm Review
+
+The algorithm works by randomly assigning either `True` or `False` to
+variables. If we let $x_1, \ldots, x_n$ be the set of variables in a
+formula, the KT algorithm assigns Bernoulli variables $b_1, \ldots, b_n$
+to the variables in order to build a model $M$ where
+
+$$
+M(x_i) = \left\{
+          \begin{array}{ll}
+            \text{True} & b_i = 1 \\
+            \text{False} & b_i = 0
+          \end{array}
+          \right.
+$$
+
+The discussion in Kleinberg-Tardos assume that $P(b_i = 1) = 1/2$.
+
+
+## 1 - Random number of literals
 
 Given a CNF formula $f$ with $m$ clauses and $X$ is a random variable
 that stands for the proportions of the clauses in $f$ satisfied by the
@@ -159,7 +182,7 @@ This makes sense intuitively, since clauses are "easier" (more likely) to
 be satisfied when they have more clauses, and Max-3SAT instances
 are likely to have more literals.
 
-### 1.2 - Proportion of Assignments and Literals
+## 2 - Proportion of Assignments and Literals
 
 Previous analyses of the KT algorithm made two assumptions:
 
@@ -167,17 +190,17 @@ Previous analyses of the KT algorithm made two assumptions:
 That is, if $p$ equals the probability that a variable is
 assigned to ``true``, previous analyses assumed $p = 1/2$.
 
-* The distribution of the "polarity" of literals[^1] is uniform. That is,
+* The distribution of the "polarity" of literals[^2] is uniform. That is,
 if $r$ equals the probability that a literal is positive,
 previous analyses assumed $r = 1/2$.
 
-[^1]: By the "polarity" of a literal we mean whether the literal is
+[^2]: By the "polarity" of a literal we mean whether the literal is
 negated (which makes it negative) or not (which makes it positive).
 
 The natural question arises: how does the distribution of $\expect{X_f}$
 change when $p \neq 1/2$ or $r \neq 1/2$?
 
-Notice that in \S 1.1 we assumed that $P(Y_{ij} = 0) = 1/2$. In general,
+Notice that in \S 1 we assumed that $P(Y_{ij} = 0) = 1/2$. In general,
 we know that $Y_{ij} = 0$ when the either the literal is positive and
 its variable is assigned ``false`` or the literal is negative and its
 variable is assigned ``true``. That is,
@@ -206,7 +229,7 @@ $$
 \ldotp
 $$
 
-Recalling the analysis for $\expect{X_f}$ in \S 1.1,
+Recalling the analysis for $\expect{X_f}$ in \S 1,
 
 $$
 \expect{X_f}
@@ -252,7 +275,7 @@ $$
 = 1 - \dfrac{1}{n}\paren{1 - 1/2^n}
 $$
 
-which matches the result from \S 1.1.
+which matches the result from \S 1.
 
 Again, if we assumed that the number of literals in each clause is fixed
 such that $L_i = l$ for all $L_i \in L$,
@@ -333,4 +356,39 @@ even though it is NP-complete. Compare this to the Traveling Salesman
 Problem, where it is both NP-complete and impossible to approximate
 (unless $P = NP$).
 
-### 1.3 -  Experiments
+## 3 - Experiments
+We ran experiments to empirically verify our analyses above. The experiments
+consisted of generating a CNF formula with 1000 clauses and running the
+KT algorithm to generate a model for the formula[^3].
+We modified several parameters, including (1) the number of literals per
+clause ($n$), (2) whether the number of literals per clause is uniformly
+random (from 1 to $n$) or constant (always $n$), (3) the proportion of
+literals in the formula that are positive ($r$), and (4) the proportion of
+variables assigned `True` by the KT algorithm ($p$).
+
+[^3]: We implemented the experiments in Haskell.
+Go to [github.com/rolph-recto/cs6161-project](github.com/rolph-recto/cs6161-project)
+to see the code.
+
+
+  Random literals?        n          r           p          % sat        expected
+--------------------   -------   ---------   ---------   -----------   ------------
+         Yes              3         0.5         0.5         0.7075        0.7083
+         Yes              3         0.3         0.5         0.6996        0.7083
+         Yes              5         0.5         0.5         0.8076        0.8063
+         Yes              5         0.3         0.8         0.7010        0.7036
+         No               3         0.5         0.5         0.8751        0.8750
+         No               3         0.5         1.0         0.8741        0.8750
+         No               5         0.5         0.5         0.9688        0.9688
+         No               5         0.4         0.5         0.9616        0.9688
+
+
+We ran 100 trials for each parameter setting and calculated the average
+number of clauses satisfied in a formula. The table above summarizes
+our results. The first four columns specify the parameter setting for that
+experiment; the `% sat` column denotes the average proportion of clauses
+satisfied in a formula over 100 trials. The `expected` column denotes the
+predicted proportion of satisfied clauses by the analyses above. The results
+strongly indicate wide agreement between the empirically observed results
+and the predicted proportions, which vindicates the analyses above as correct.
+

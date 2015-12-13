@@ -117,54 +117,40 @@ printResult :: ExperimentResult -> String
 printResult (desc, m, numSat) = 
   desc ++ "," ++ show m ++ "," ++ show numSat
 
-experiment1 :: IO ExperimentResult
-experiment1 = do
-  numSat <- maxSATDriver True 3 1000 0.50 0.50 
-  let desc = "randomlits n=3 r=0.50 p=0.50"
-  return (desc,1000,numSat)
+generateDesc :: Bool -> Int -> Int -> Float -> Float -> String
+generateDesc rlits n m r p =
+  let litstr = if rlits then "randomlits" else "norandomlits" in 
+  let nstr = "n = " ++ show n in 
+  let mstr = "m = " ++ show m in
+  let rstr = "r = " ++ show r in
+  let pstr = "p = " ++ show p in
+  litstr ++ " " ++ nstr ++ " " ++ mstr ++ " " ++ rstr ++ " " ++ pstr
 
-experiment2 :: IO ExperimentResult
-experiment2 = do
-  numSat <- maxSATDriver True 5 1000 0.50 0.50 
-  let desc = "randomlits n=5 r=0.50 p=0.50"
-  return (desc,1000,numSat)
-
-experiment3 :: IO ExperimentResult
-experiment3 = do
-  numSat <- maxSATDriver False 3 1000 0.50 0.50 
-  let desc = "norandomlits n=3 r=0.50 p=0.50"
-  return (desc,1000,numSat)
-
-experiment4 :: IO ExperimentResult
-experiment4 = do
-  numSat <- maxSATDriver False 5 1000 0.50 0.50 
-  let desc = "norandomlits n=5 r=0.50 p=0.50"
-  return (desc,1000,numSat)
-
-experiment5 :: IO ExperimentResult
-experiment5 = do
-  numSat <- maxSATDriver False 5 1000 0.50 0.25
-  let desc = "norandomlits n=5 r=0.50 p=0.25"
-  return (desc,1000,numSat)
-
-experiment6 :: IO ExperimentResult
-experiment6 = do
-  numSat <- maxSATDriver False 5 1000 0.25 0.50
-  let desc = "norandomlits n=5 r=0.25 p=0.50"
-  return (desc,1000,numSat)
+experiment :: Bool -> Int -> Int -> Float -> Float -> IO ExperimentResult
+experiment rlits n m r p = do
+  numSat <- maxSATDriver rlits n m r p
+  let desc = generateDesc rlits n m r p
+  return (desc,m,numSat)
 
 -- experiment driver
 -- trials is the number of times to do each experiment
 runExperiments :: Int -> WriterT [String] IO ()
 runExperiments trials = do
-  let experiments = [experiment1,experiment2,experiment3,
-                      experiment4,experiment5,experiment6]
+  let experiments = [experiment True 3 1000 0.50 0.50
+                    ,experiment True 5 1000 0.50 0.50
+                    ,experiment True 3 1000 0.30 0.50
+                    ,experiment True 5 1000 0.30 0.80
+                    ,experiment False 3 1000 0.50 0.50
+                    ,experiment False 3 1000 0.50 1.00
+                    ,experiment False 5 1000 0.50 0.50
+                    ,experiment False 5 1000 0.30 0.50]
+
   -- run experiments!
   results <- forM (zip [1..] experiments) $ \(i,experiment) -> do
     lift $ putStrLn ("Experiment " ++ show i)
     
     trialResults <- forM [1..trials] $ \j -> do
-      lift $ putStrLn ("Runing trial " ++ show j ++ "...")
+      lift $ putStrLn ("Running trial " ++ show j ++ "...")
       result <- lift experiment
       return $ printResult result
 
