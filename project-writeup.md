@@ -1,4 +1,5 @@
-% An Analysis of the Kleinberg-Tardos MaxSAT Approximation Algorithm
+% An Analysis of the Kleinberg-Tardos
+  MaxSAT Approximation Algorithm
 % Rolph Recto
 % CS 6161 Final Project
 
@@ -37,7 +38,7 @@ M(x_i) = \left\{
           \right.
 $$
 
-The discussion in Kleinberg-Tardos assume that $P(b_i = 1) = 1/2$.
+The discussion in Kleinberg-Tardos assumes that $P(b_i = 1) = 1/2$.
 
 
 ## 1 - Random number of literals
